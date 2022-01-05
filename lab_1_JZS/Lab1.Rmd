@@ -1,0 +1,86 @@
+---
+title: "ESM 244 Lab 1"
+author: "Jaxon Stuhr"
+date: "1/4/2022"
+output: html_document
+---
+
+```{r setup, include=TRUE, warning = FALSE, message = FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(here)
+library(sf)
+library(tmap)
+```
+
+### Read in data
+
+```{r}
+sf_trees = read_csv(here("data", "sf_trees", "sf_trees.csv"))
+```
+
+### Part 1: Warngling and ggplot
+
+**Example 1:** Find counts of observation by `legal_status` and wrangle.
+
+```{r}
+### method 1: group_by() and summarize()
+sf_trees %>% 
+  group_by(legal_status) %>% 
+  summarize(tree_count = n())
+
+### method 2: count
+top_5_status = sf_trees %>% 
+  count(legal_status) %>% 
+  drop_na(legal_status) %>% 
+  rename(tree_count = n) %>% 
+  relocate(tree_count) %>% # moves variable to front
+  slice_max(tree_count, n = 5) %>% 
+  arrange(-tree_count)
+```
+
+Make a graph of top 5 from above:
+
+```{r}
+ggplot(data = top_5_status, aes(x = fct_reorder(legal_status, tree_count), y = tree_count)) + 
+  geom_col(fill = 'darkgreen') +
+  labs(x = "Legal Status", y = "Tree Count") +
+  coord_flip() + # switch axes
+  theme_minimal()
+```
+
+**Example 2:** Only going to keep observations where legal status is "Permitted Site" and caretake is "MTA", and store as `permitted_data_df`
+
+```{r}
+permitted_data_df = sf_trees %>% 
+  filter(legal_status %in% c("Permitted Site", "Private"), caretaker == "MTA")
+```
+
+**Example 3:** Only keep blackwood acacia trees, and then ol keep columns `legal_status`, `date`, `latitude`, `longitude` and store as `blackwood_acacia_df`
+
+```{r}
+blackwood_acacia_df = sf_trees %>% 
+  filter(str_detect(species, "Blackwood Acacia")) %>% 
+  select(legal_status, date, lat = latitude, long = longitude)
+
+# make a graph of locations
+ggplot(data = blackwood_acacia_df, aes(x = long, y = lat)) +
+  geom_point(color = 'darkgreen')
+```
+
+**Example 4:** Separate function
+
+```{r}
+sf_trees_sep = sf_trees %>% 
+  separate(species, into = c('spp_scientific', 'spp_common'), sep = ' :: ')
+```
+
+
+**Example 5:** Use reunite function
+
+```{r}
+ex_5 = sf_trees %>% 
+  unite('id_status', tree_id, legal_status)
+```
+
